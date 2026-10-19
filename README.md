@@ -51,23 +51,20 @@ The adversary gained access via brute-forced RDP credentials (`slflare`), execut
 ## Flag by Flag
 
 ### 🚩 Flag 1 – Attacker IP Address
-**MITRE Technique:** T1110.001 – Brute Force: Password Guessing  
+**MITRE Technique:** T1566.001 - Phishing: Spearphishing Attachment  
 
-The query inspects RDP logon events on the flare host to identify the external IP that successfully brute-forced access. This isolates the attacker’s source infrastructure.
+The query inspects email messages the user received, in order to isolate the specific email that delivered the malicious attachment. 
 
-**Finding:** Successful RDP login from external IP `159.26.106.84` after repeated failures.  
+**Finding:** Which external email address delivered the document that preceded the anomalous file access.  
 **KQL Query Used:**
 ````kql
-DeviceLogonEvents
-| where DeviceName contains "flare"
-| where Timestamp between (datetime(2025-09-14 00:00:00) .. datetime(2025-09-14 23:59:59))
+OfficeActivity_CL
+| where TimeGenerated between (datetime(2026-09-20T09:00:00Z) .. datetime(2026-09-20T10:00:00Z))
+| where RunId == "el--17-20260920"
+| where UserId =~ "emily.chen@cormorantcapital.com"
+| where Operation == "MessageReceived" and OfficeWorkload == "Exchange"
+| project TimeGenerated, SenderAddress, Subject, AttachmentNames
 
-DeviceLogonEvents
-| where DeviceName == "slflarewinsysmo"
-| where Timestamp between (datetime(2025-09-13 00:00:00) .. datetime(2025-09-16 23:59:59))
-| where RemoteIP == "159.26.106.84"
-| project Timestamp, DeviceName, AccountName, ActionType, LogonType, RemoteIP
-| order by Timestamp desc
 ````
 
 ![Flag 1](Images/flag1.png)
