@@ -27,6 +27,7 @@ No sign-in anomalies in Entra ID for emily.chen during the window
 ---
 
 ## 🎯 Executive Summary
+##REDO
 The adversary gained access via brute-forced RDP credentials (`slflare`), executed `msupdate.exe`, and persisted with a scheduled task (`MicrosoftUpdateSync`). They disabled Windows Defender scanning, ran reconnaissance (`systeminfo`), staged sensitive data into `backup_sync.zip`, and attempted to exfiltrate it via `curl` to `185.92.220.87:8081`. Multiple outbound connections (PowerShell, msupdate.exe, curl) to `185.92.220.87` indicate C2 activity. The attacker’s intent was **data theft**, with exfiltration staged from the SLFlare user profile.
 
 ---
@@ -55,7 +56,8 @@ The adversary gained access via brute-forced RDP credentials (`slflare`), execut
 
 The query inspects email messages the user received, in order to isolate the specific email that delivered the malicious attachment. 
 
-**Finding:** Which external email address delivered the document that preceded the anomalous file access.  
+**Question:** Which external email address delivered the document that preceded the anomalous file access.  
+**Finding:** `quarterly.reports@globalfinancereview.net`     
 **KQL Query Used:**
 ````kql
 OfficeActivity_CL
@@ -70,35 +72,39 @@ OfficeActivity_CL
 
 ---
 
-### 🚩 Flag 2 – Compromised Account
-**MITRE Technique:** T1078 – Valid Accounts  
+### 🚩 Flag 2 – Poisioned document
+**MITRE Technique:** T1566.001 - Phishing: Spearphishing Attachment 
 
-The same logon data shows which valid account was used in the successful login. This confirms the adversary leveraged slflare credentials to gain access.
+The same office activitty telemetry shows the name of the malicious attachment.
 
-**Finding:** The attacker successfully authenticated using the account `slflare`.  
+**Question:** What is the name of the document that was attached to the delivery email?     
+**Finding:** `Q3-2026-Global-Markets-Review.docx`   
 **KQL Query Used:** (same as Flag 1)  
 
-![Flag 1](Images/flag2.png)
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag1.png"/> 
 
 ---
 
-### 🚩 Flag 3 – Executed Binary
-**MITRE Techniques:** T1059.003 – Windows Command Shell, T1204.002 – User Execution  
+### 🚩 Flag 3 – Time gap
+**MITRE Techniques:** T1204.002 - User Execution: Malicious File\
 
-Process creation events are queried to uncover suspicious executables launched by the compromised user. This exposes msupdate.exe as the attacker’s payload.
+Email message delivered at `09:15:22`, and the document was first accessed at `10:42:08`. Gap of `1hr 27mins`. Not quite zero-click, as the user must open the document and invoke Co-Pilot in order to trigger the malicious payload. The attack chain depends on the user invoking Co-Pilot.
 
-**Finding:** The attacker executed a suspicious binary `msupdate.exe`.  
+**Question:** How much time elapsed between the email delivery and Emily's first interaction with the document? What does this gap tell you about the attack model? 
+**Finding:** `1hr 27mins`
 **KQL Query Used:**
 ````kql
-DeviceProcessEvents
-| where DeviceName == "slflarewinsysmo"
-| where InitiatingProcessAccountName == "slflare"
-| where Timestamp between (datetime(2025-09-16 12:45:00) .. datetime(2025-09-19 18:00:00))
-| project Timestamp, DeviceName, AccountName, FileName, FolderPath, ProcessCommandLine
-| order by Timestamp asc
+OfficeActivity_CL
+| where TimeGenerated between (datetime(2026-09-20T09:00:00Z) .. datetime(2026-09-20T11:00:00Z))
+| where RunId == "el--17-20260920"
+| where UserId =~ "emily.chen@cormorantcapital.com"
+| where (Operation == "MessageReceived" and SenderAddress has "globalfinancereview")
+    or (Operation == "FileAccessed" and OfficeObjectId has "Q3-2026")
+| project TimeGenerated, Operation, OfficeObjectId, SenderAddress, Subject
+| order by TimeGenerated asc
 ````
-
-![Flag 1](Images/flag3.png)
+imag of FLAG #3
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag1.png"/> 
 
 ---
 
