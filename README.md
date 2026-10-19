@@ -1,7 +1,7 @@
 
 # 🕵️‍♂️ Threat Hunt Report: **ECHOLEAKS **
 
-**Analyst:** Peter Van Rossum  
+**Analyst:** Alton Stewart  
 **Date Completed:** October 18, 2026 
 **Environment Investigated:** Financial advisory firm that utilizes M365 E5 licenses with Co-Pilot. An analytics rule flags unusual file access, where sensitive files were accessed in an extremely brief period of time. The connected user states they were just asking Co-Pilot to summarize a report. 
 **Timeframe:** September 20, 2025 – 9:00:00 to 11:00:00 (UTC)  
