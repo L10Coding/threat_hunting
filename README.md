@@ -1,16 +1,28 @@
 
-# 🕵️‍♂️ Threat Hunt Report: **ECHOLEAKS **
+# 🕵️‍♂️ Threat Hunt Report: **EchoLeak - AI Assisted Exfiltration**
 
 **Analyst:** Alton Stewart  
-**Date Completed:** October 18, 2026 
-**Environment Investigated:** Financial advisory firm that utilizes M365 E5 licenses with Co-Pilot. An analytics rule flags unusual file access, where sensitive files were accessed in an extremely brief period of time. The connected user states they were just asking Co-Pilot to summarize a report. 
-**Timeframe:** September 20, 2025 – 9:00:00 to 11:00:00 (UTC)  
+**Date Completed:** October 18, 2026   
+**Environment Investigated:** Financial advisory firm that utilizes M365 E5 licenses with Co-Pilot. An analytics rule flags unusual file access, where sensitive files were accessed in an extremely brief period of time. The connected user states they were just asking Co-Pilot to summarize a report.   
+**Timeframe:** September 20, 2025 – 9:00:00 to 11:00:00 (UTC)    
 **Duration:** 2 hours  
+**Severity:** High
 
 ---
 
 ## 🧠 Scenario Overview
-Suspicious RDP activity against a cloud-hosted Windows system escalated into full compromise. The attacker brute-forced valid credentials, executed a malicious binary, established persistence, impaired defenses, ran discovery commands, archived sensitive data, and attempted exfiltration to an external server. This hunt reconstructs the timeline, identifies the attacker’s techniques, and correlates Sysmon, Defender, and Sentinel telemetry to flag key adversary actions.
+Cormorant Capital Partners, a mid-size financial advisory firm with approximately 200 employees using M365 E5 with Copilot for Microsoft 365, is investigating a critical data security anomaly. At 10:42 UTC on 20 September 2026, an analytics rule flagged an unusual file access burst where financial analyst Emily Chen accessed five highly sensitive documents—including board meeting notes, M&A target assessments, and salary reviews—within a six-second window. While Chen stated she only asked Copilot to summarize a routine quarterly market review email received ninety minutes prior, investigation logs show zero unusual sign-in or user activity during that gap, raising urgent questions regarding why the AI assistant accessed unrelated, privileged data and whether any information has been exfiltrated from the organization.
+
+**Add this to end**
+This incident reproduces the CVE-2025-32711 vulnerability cluster documented by Aim Security and Unit 42 (Palo Alto Networks), which centers on indirect prompt injection. In this scenario, malicious instructions embedded within the external email's attachment successfully hijacked M365 Copilot during the summarization process. By exploiting the assistant's legitimate Microsoft Graph API capabilities, the injection forced Copilot to search for, access, and potentially exfiltrate sensitive data without the user's explicit knowledge or intent, serving as a primary case study for students analyzing LLM-based security risks.
+
+
+What is known at handoff
+
+External email with attachment received by emily.chen at approximately 09:15 UTC
+Anomalous file access by emily.chen at 10:42, five files never previously opened
+Copilot invocation shortly before the file access burst
+No sign-in anomalies in Entra ID for emily.chen during the window
 
 ---
 
@@ -23,9 +35,9 @@ The adversary gained access via brute-forced RDP credentials (`slflare`), execut
 
 | Flag # | Objective | Value |
 |--------|-----------|-------|
-| **1** | Attacker IP Address | `159.26.106.84` |
-| **2** | Compromised Account | `slflare` |
-| **3** | Executed Binary | `msupdate.exe` |
+| **1** | Initial Access - Sender's Address | `quarterly.reports@globalfinancereview.net` |
+| **2** | Initial Access - Poisoned document | `Q3-2026-Global-Markets-Review.docx` |
+| **3** | Initial Access - Time gap | `1hr27mins` |
 | **4** | Command Line Used | `"msupdate.exe" -ExecutionPolicy Bypass -File C:\Users\Public\update_check.ps1` |
 | **5** | Scheduled Task Created | `MicrosoftUpdateSync` |
 | **6** | Defender Exclusion Path | `C:\Windows\Temp` |
