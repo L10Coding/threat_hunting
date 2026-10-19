@@ -118,8 +118,9 @@ imag of FLAG #3
 ### 🚩 Flag 4 – User Prompt
 **MITRE Technique:** T1059 - Command and Scripting Interpreter
 
-(ADD QUICK SUMMARY OF QUERY)
-The query extracts the full command line parameters tied to the malicious binary execution. This reveals the attacker’s intent to bypass execution policy and run a PowerShell script.
+Emily's prompt was: "Summarise the key findings of this quarterly report." A routine document summarisation request, entirely innocent in both wording and intent.
+
+Copilot processes the FULL document content to generate the summary, including hidden text in white-on-white font and zero-point paragraphs. The user's intent and the document's injected instructions are mixed in the same processing context. This is why indirect prompt injection (ATLAS AML.T0051) is effective: the user never knows the document contains instructions.
 
 **Question:** `What did Emily ask Copilot to do with the document?`  
 **Finding:** `Summarise the key findings of this quarterly report`    
