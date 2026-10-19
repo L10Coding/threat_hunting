@@ -50,7 +50,7 @@ The adversary gained access via brute-forced RDP credentials (`slflare`), execut
 
 ## Flag by Flag
 
-### 🚩 Flag 1 – Attacker IP Address
+### 🚩 Flag 1 – Sender's Address
 **MITRE Technique:** T1566.001 - Phishing: Spearphishing Attachment  
 
 The query inspects email messages the user received, in order to isolate the specific email that delivered the malicious attachment. 
@@ -66,8 +66,7 @@ OfficeActivity_CL
 | project TimeGenerated, SenderAddress, Subject, AttachmentNames
 
 ````
-
-![Flag 1](Images/flag1.png)
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag1.png"/> 
 
 ---
 
