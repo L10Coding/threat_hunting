@@ -39,13 +39,20 @@ The adversary gained access via brute-forced RDP credentials (`slflare`), execut
 | **1** | Initial Access - Sender's Address | `quarterly.reports@globalfinancereview.net` |
 | **2** | Initial Access - Poisoned document | `Q3-2026-Global-Markets-Review.docx` |
 | **3** | Initial Access - Time gap | `1hr27mins` |
-| **4** | Command Line Used | `"msupdate.exe" -ExecutionPolicy Bypass -File C:\Users\Public\update_check.ps1` |
-| **5** | Scheduled Task Created | `MicrosoftUpdateSync` |
-| **6** | Defender Exclusion Path | `C:\Windows\Temp` |
-| **7** | Discovery Command | `"cmd.exe" /c systeminfo` |
-| **8** | Archive File Created | `backup_sync.zip` |
-| **9** | C2 Destination | `185.92.220.87` |
-| **10** | Exfiltration Attempt | `185.92.220.87:8081` |
+| **4** | Execution - User Prompt | `Summarise the key findings of this quarterly report` |
+| **5** | Execution - Anomalous tool calls Task Created | `Graph.SearchFiles, site:cormorantcapital.sharepoint.com` |
+| **6** | Execution - ATLAS technique | `T0051` |
+| **7** | Collection - Sensitive file count | `5` |
+| **8** | Collection - Exfiltration domain | `metrics-cdn.analyticshub.io` |
+| **9** | Collection - Exfiltration mechanism | `indirect prompt injection attack, markdown-embedded tracking pixels` |
+| **10** | Exfiltration - Accessed file | `Copilot System Configuration - Cormorant.json, Client Portfolio - Henderson Family Office.xlsx, Salary Review FY2027 - Executive Summary.pdf, Project Falcon - M&A Target Assessment.xlsx, Board Meeting Minutes - October 2026.docx` |
+| **11** | Exfiltration - Data content visibility | `No, The specific limitation is that the audit trail captures metadata and structural transaction records rather than the full inner payload or file text of the accessed documents.` |
+| **12** | Exfiltration - System prompt exposure | `Copilot system configuration, matters because that information can be used to craft future attacks.` |
+| **13** | Judgement - Copilot behavior: normal or hijacked | `Claim does not hold, as the telemetry shows an impossible human processing velocity from 10:42:41 until 10:42:55, thus proving there was a scripted payload embedded inside the document the user opened.` |
+| **14** | Judgement - Access pattern analysis | `Differences between user intent and copilot actions, the fast velocity of copilot responses, the external URLs hidden in image links to exfiltrate data.` |
+| **15** | Incident Response - SearchLeak scope | `4 additional files, confidential, restricted, board, acquisition, salary` |
+| **16** | Incident Response - Total file count. | `13` |
+| **17** | Incident Response - Incident classification | `I'd classify this incident as an External Input Manipulation, not a compromised user account or a compromised Co-Pilot configuration` |
 
 ---
 
@@ -90,8 +97,8 @@ The same office activitty telemetry shows the name of the malicious attachment.
 
 Email message delivered at `09:15:22`, and the document was first accessed at `10:42:08`. Gap of `1hr 27mins`. Not quite zero-click, as the user must open the document and invoke Co-Pilot in order to trigger the malicious payload. The attack chain depends on the user invoking Co-Pilot.
 
-**Question:** How much time elapsed between the email delivery and Emily's first interaction with the document? What does this gap tell you about the attack model? 
-**Finding:** `1hr 27mins`
+**Question:** How much time elapsed between the email delivery and Emily's first interaction with the document? What does this gap tell you about the attack model?    
+**Finding:** `1hr 27mins`   
 **KQL Query Used:**
 ````kql
 OfficeActivity_CL
