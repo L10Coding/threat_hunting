@@ -408,14 +408,11 @@ CopilotAudit_CL
 
 | Timestamp (UTC) | Event | Details |
 |-----------------|-------|---------|
-| 2025-09-16 11:43:46 | Initial RDP login success | Attacker IP: `159.26.106.84` |
-| 2025-09-16 11:45:12 | Binary executed | `msupdate.exe` |
-| 2025-09-16 11:46:00 | Scheduled Task created | `MicrosoftUpdateSync` |
-| 2025-09-16 11:47:30 | Defender exclusions modified | Excluded path `C:\Windows\Temp` |
-| 2025-09-16 11:48:22 | Discovery executed | `cmd.exe /c systeminfo` |
-| 2025-09-16 12:10:45 | Archive created | `backup_sync.zip` |
-| 2025-09-16 12:20:30 | Outbound C2 traffic | Destination `185.92.220.87` |
-| 2025-09-16 12:43:42 | Exfiltration attempt | `curl.exe` POST `backup_sync.zip` → `185.92.220.87:8081` |
+| 2026-09-20 09:15:22 | Initial access | Attacker IP: `An external email with a malicious document attachment (Q3-2026-Global-Markets-Review.docx) is delivered to financial analyst Emily Chen from quarterly.reports@globalfinancereview.net.` |
+| 2026-09-20 10:42:08  | User execution| `After a 1-hour and 27-minute gap, Emily Chen opens the document and prompts M365 Copilot to: "Summarise the key findings of this quarterly report".` |
+| 2026-09-20 10:42:41 to 10:42:55  | AI Hijacking and Collection | `Hidden instructions inside the document (Indirect Prompt Injection) hijack Copilot. At machine speed, Copilot executes unauthorized Microsoft Graph API calls (Graph.SearchFiles) to locate and rapidly access 5 highly sensitive files it was never intended to touch.` |
+| 2026-09-20 10:43:00  | Exfiltration | Copilot renders hidden markdown tracking pixels into its response interface. The sensitive data is Base64-encoded inside these image links, causing the user's browser to automatically leak the data out to metrics-cdn.analyticshub.io. |
+| 2026-09-20 Post 10:44:00 | Scope expansion (SearchLeak) | The attacker leverages a follow-on vulnerability cluster (SearchLeak) to force Copilot to run broader search campaigns across SharePoint using target keywords (e.g., confidential, board, salary), compromising 8 additional files (bringing the incident total to 13 files). |
 
 ---
 
