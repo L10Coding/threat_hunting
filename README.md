@@ -1,15 +1,11 @@
-# threat_hunting
-# 🕵️‍♂️ Threat Hunt Report: **Hide Your RDP – Password Spray Leads to Full Compromise**
 
-<p align="center">
-  <img src="./Images/rdp_hacker.png" alt="RDP_Attack" width="80%">
-</p>
+# 🕵️‍♂️ Threat Hunt Report: **ECHOLEAKS **
 
 **Analyst:** Peter Van Rossum  
-**Date Completed:** 21-September-2025  
-**Environment Investigated:** An Azure-based enterprise cloud environment representing a modern corporate network with roughly 1,000 licensed endpoints under centralized security management. The environment integrates Microsoft Defender for Endpoint (MDE) for host-level telemetry and protection, and Microsoft Sentinel as the SIEM/SOAR platform for log aggregation, correlation, and incident response. 
-**Timeframe:** September 16, 2025 – 11:43:46 to 12:43:42 (UTC)  
-**Duration:** 59 minutes, 56 seconds  
+**Date Completed:** October 18, 2026 
+**Environment Investigated:** Financial advisory firm that utilizes M365 E5 licenses with Co-Pilot. An analytics rule flags unusual file access, where sensitive files were accessed in an extremely brief period of time. The connected user states they were just asking Co-Pilot to summarize a report. 
+**Timeframe:** September 20, 2025 – 9:00:00 to 11:00:00 (UTC)  
+**Duration:** 2 hours  
 
 ---
 
