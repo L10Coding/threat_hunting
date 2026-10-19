@@ -110,8 +110,8 @@ OfficeActivity_CL
 | project TimeGenerated, Operation, OfficeObjectId, SenderAddress, Subject
 | order by TimeGenerated asc
 ````
-imag of FLAG #3
-<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag1.png"/> 
+
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag3.png"/> 
 
 ---
 
@@ -133,8 +133,8 @@ CopilotAudit_CL
 | where InteractionType == "Prompt"
 | project TimeGenerated, UserPrompt, Application
 ````
-imag of FLAG #4
-<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag1.png"/> 
+
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag4.png"/> 
 
 ---
 
@@ -155,8 +155,7 @@ CopilotAudit_CL
 | project TimeGenerated, ToolName, ToolParameters, DataSourcesAccessed
 ````
 
-image of FLAG #5
-<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag1.png"/> 
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag5.png"/> 
 
 ---
 
@@ -192,8 +191,8 @@ OfficeActivity_CL
 | where OfficeObjectId !has "Q3-2026"
 | summarize dcount(OfficeObjectId)
 ````
-image of FLAG #7
-<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag1.png"/> 
+
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag7.png"/> 
 
 ---
 
@@ -215,8 +214,7 @@ CopilotAudit_CL
 | project TimeGenerated, CopilotResponse
 ````
 
-image of FLAG #7
-<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag1.png"/> 
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag8.png"/> 
 
 ---
 
@@ -238,7 +236,7 @@ CopilotAudit_CL
 | project TimeGenerated, CopilotResponse
 ````
 
-![Flag 1](Images/flag9.png)
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag9.png"/> 
 
 ---
 
@@ -260,7 +258,7 @@ OfficeActivity_CL
 | project TimeGenerated, OfficeObjectId
 ````
 
-![Flag 1](Images/flag9_and_10.png)
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag10.png"/> 
 
 ---
 
@@ -294,7 +292,7 @@ CopilotAudit_CL
 | project TimeGenerated, InteractionType, CopilotResponse
 ````
 
-![Flag 1](Images/flag9_and_10.png)
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag12.png"/> 
 
 ---
 
@@ -315,7 +313,7 @@ CopilotAudit_CL
 | project TimeGenerated, ToolName, ToolParameters
 ````
 
-![Flag 1](Images/flag9_and_10.png)
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag13.png"/> 
 
 ---
 
@@ -346,8 +344,7 @@ CopilotAudit_CL
 | project TimeGenerated, ToolParameters
 ````
 
-
-![Flag 1](Images/flag9_and_10.png)
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag15.png"/> 
 
 ---
 
@@ -369,8 +366,7 @@ OfficeActivity_CL
 | summarize dcount(OfficeObjectId)
 ````
 
-
-![Flag 1](Images/flag9_and_10.png)
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag16.png"/> 
 
 ---
 
@@ -389,7 +385,8 @@ EntraSignIn_CL
 | where TimeGenerated between (datetime(2026-09-20T08:00:00Z) .. datetime(2026-09-20T12:00:00Z))
 | project TimeGenerated, IPAddress, Location, Status, ConditionalAccessStatus, AppDisplayName
 ````
-(flag 17.1)
+
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag17.0.png"/> 
 
 ````kql
 CopilotAudit_CL
@@ -399,8 +396,8 @@ CopilotAudit_CL
 | project TimeGenerated, InteractionType, UserPrompt, ToolName, ToolParameters
 | order by TimeGenerated asc
 ````
-(flag 17.2)
-![Flag 1](Images/flag9_and_10.png)
+
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag17.2.png"/> 
 
 ---
 
