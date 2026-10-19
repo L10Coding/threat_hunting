@@ -4,7 +4,7 @@
 **Analyst:** Alton Stewart  
 **Date Completed:** October 18, 2026   
 **Environment Investigated:** Financial advisory firm that utilizes M365 E5 licenses with Co-Pilot. An analytics rule flags unusual file access, where sensitive files were accessed in an extremely brief period of time. The connected user states they were just asking Co-Pilot to summarize a report.   
-**Timeframe:** September 20, 2025 – 9:00:00 to 11:00:00 (UTC)    
+**Timeframe:** `September 20, 2025 – 9:00:00 to 11:00:00 (UTC)`    
 **Duration:** 2 hours  
 **Severity:** High
 
@@ -45,7 +45,7 @@ The adversary gained access via brute-forced RDP credentials (`slflare`), execut
 | **7** | Collection - Sensitive file count | `5` |
 | **8** | Collection - Exfiltration domain | `metrics-cdn.analyticshub.io` |
 | **9** | Collection - Exfiltration mechanism | `indirect prompt injection attack, markdown-embedded tracking pixels` |
-| **10** | Exfiltration - Accessed file | `Copilot System Configuration - Cormorant.json, Client Portfolio - Henderson Family Office.xlsx, Salary Review FY2027 - Executive Summary.pdf, Project Falcon - M&A Target Assessment.xlsx, Board Meeting Minutes - October 2026.docx` |
+| **10** | Exfiltration - Accessed files | `Copilot System Configuration - Cormorant.json, Client Portfolio - Henderson Family Office.xlsx, Salary Review FY2027 - Executive Summary.pdf, Project Falcon - M&A Target Assessment.xlsx, Board Meeting Minutes - October 2026.docx` |
 | **11** | Exfiltration - Data content visibility | `No, The specific limitation is that the audit trail captures metadata and structural transaction records rather than the full inner payload or file text of the accessed documents.` |
 | **12** | Exfiltration - System prompt exposure | `Copilot system configuration, matters because that information can be used to craft future attacks.` |
 | **13** | Judgement - Copilot behavior: normal or hijacked | `Claim does not hold, as the telemetry shows an impossible human processing velocity from 10:42:41 until 10:42:55, thus proving there was a scripted payload embedded inside the document the user opened.` |
@@ -115,96 +115,118 @@ imag of FLAG #3
 
 ---
 
-### 🚩 Flag 4 – Command Line Used
-**MITRE Technique:** T1059 – Command and Scripting Interpreter  
+### 🚩 Flag 4 – User Prompt
+**MITRE Technique:** T1059 - Command and Scripting Interpreter
 
+(ADD QUICK SUMMARY OF QUERY)
 The query extracts the full command line parameters tied to the malicious binary execution. This reveals the attacker’s intent to bypass execution policy and run a PowerShell script.
 
-**Finding:** `"msupdate.exe" -ExecutionPolicy Bypass -File C:\Users\Public\update_check.ps1`  
-**KQL Query Used:** (derived from Flag 3 results)  
+**Question:** `What did Emily ask Copilot to do with the document?`  
+**Finding:** `Summarise the key findings of this quarterly report`    
+**KQL Query Used:** 
+````kql
+CopilotAudit_CL
+| where TimeGenerated between (datetime(2026-09-20T10:42:00Z) .. datetime(2026-09-20T10:43:00Z))
+| where RunId == "el--17-20260920"
+| where UserId =~ "emily.chen@cormorantcapital.com"
+| where InteractionType == "Prompt"
+| project TimeGenerated, UserPrompt, Application
+````
+imag of FLAG #4
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag1.png"/> 
 
 ---
 
-### 🚩 Flag 5 – Scheduled Task Created
-**MITRE Technique:** T1053.005 – Scheduled Task  
+### 🚩 Flag 5 – Anomalous tool calls Task Created
+**MITRE Technique:** T1213 - Data from Information Repositories
 
+(ADD BRIEF SUMMARY OF QUERY)
 Registry event data is searched for TaskCache entries to detect persistence mechanisms. This highlights the attacker’s creation of the MicrosoftUpdateSync scheduled task.
 
-**Finding:** Scheduled Task `MicrosoftUpdateSync` was created for persistence.  
+**Question:** `After Emily's prompt, what tool calls did Copilot make that go beyond what a document summarisation requires? Name the tools and their targets.`  
+**Finding:** `Graph.SearchFiles, site:cormorantcapital.sharepoint.com`   
 **KQL Query Used:**
 ````kql
-DeviceRegistryEvents
-| where DeviceName contains "flare"
-| where Timestamp between (datetime(2025-09-16 12:45:00) .. datetime(2025-09-17 23:59:59))
-| where RegistryKey contains "TaskCache"
-| project Timestamp, DeviceName, ActionType, RegistryKey, RegistryValueName, RegistryValueData, InitiatingProcessFileName, InitiatingProcessCommandLine, InitiatingProcessAccountName
-| order by Timestamp asc
+CopilotAudit_CL
+| where TimeGenerated between (datetime(2026-09-20T10:42:30Z) .. datetime(2026-09-20T10:43:30Z))
+| where RunId == "el--17-20260920"
+| where UserId =~ "emily.chen@cormorantcapital.com"
+| where InteractionType == "ToolCall"
+| project TimeGenerated, ToolName, ToolParameters, DataSourcesAccessed
 ````
-![Flag 1](Images/flag5.png)
+
+image of FLAG #5
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag1.png"/> 
 
 ---
 
-### 🚩 Flag 6 – Defender Exclusion Path
-**MITRE Technique:** T1562.001 – Impair Defenses: Disable or Modify Tools  
+### 🚩 Flag 6 – ATLAS technique
+**MITRE Technique:** AML.T0051.001 - LLM Prompt Injection: Indirect
 
+(ADD BRIEF SUMMARY OF QUERY)
 Registry modifications are reviewed to detect Defender configuration changes. This shows the adversary weakening defenses by excluding C:\Windows\Temp from scanning.
 
-**Finding:** Defender exclusion added for path `C:\Windows\Temp`.  
+**Question:** `Which ATLAS technique describes the method the attacker used to make Copilot follow instructions hidden in the document?`  
+**Finding:** `T0051`  
 **KQL Query Used:**
-````kql
-DeviceRegistryEvents
-| where RegistryKey contains "Exclusion"
-| where Timestamp between (datetime(2025-09-16 12:45:00) .. datetime(2025-09-19 23:59:59))
-````
-![Flag 1](Images/flag6.png)
+
+No KQL query needed. This is a knowledge flag referencing the ATLAS taxonomy.
 
 ---
 
-### 🚩 Flag 7 – Discovery Command
-**MITRE Technique:** T1082 – System Information Discovery  
+### 🚩 Flag 7 – Sensitive file count
+**MITRE Technique:** T1213 - Data from Information Repositories 
 
+(ADD BRIEF SUMMARY OF QUERY)
 Process events are filtered for cmd.exe with the systeminfo argument. This identifies the attacker’s reconnaissance activity to learn system details.
 
-**Finding:** Attacker ran discovery using `cmd.exe /c systeminfo`.  
+**Question:** `How many sensitive files did Copilot access that Emily had never opened before?`    
+**Finding:** `5`      
 **KQL Query Used:**
 ````kql
-DeviceProcessEvents
-| where DeviceName contains "flare"
-| where Timestamp between (datetime(2025-09-16 19:30:00) .. datetime(2025-09-16 19:50:00))
-| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine
-| order by Timestamp asc
+OfficeActivity_CL
+| where TimeGenerated between (datetime(2026-09-20T10:42:35Z) .. datetime(2026-09-20T10:43:15Z))
+| where RunId == "el--17-20260920"
+| where UserId =~ "emily.chen@cormorantcapital.com"
+| where Operation == "FileAccessed"
+| where OfficeObjectId !has "Q3-2026"
+| summarize dcount(OfficeObjectId)
 ````
-
-![Flag 1](Images/flag7.png)
+image of FLAG #7
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag1.png"/> 
 
 ---
 
-### 🚩 Flag 8 – Archive File Created
-**MITRE Technique:** T1074.001 – Data Staged: Local Data Staging  
+### 🚩 Flag 8 – Exfiltration domain
+**MITRE Technique:** T1041 - Exfiltration Over C2 Channel
 
 File creation logs are queried to spot sensitive data being staged. This captures the creation of backup_sync.zip as a precursor to exfiltration.
 
-**Finding:** Sensitive data staged into `backup_sync.zip` in AppData Temp directory.  
+**Question:** `Through what domain was the extracted data exfiltrated? Where in the telemetry does it appear?`    
+**Finding:** `metrics-cdn.analyticshub.io`     
 **KQL Query Used:**
 ````kql
-DeviceProcessEvents
-| where AccountName == "slflare"
-| where Timestamp between (datetime(2025-09-16) .. datetime(2025-09-19))
-| where ProcessCommandLine has_any (".zip",".rar","7z")
-| project Timestamp, DeviceName, AccountName, FileName, ProcessCommandLine
-| order by Timestamp desc 
+CopilotAudit_CL
+| where TimeGenerated between (datetime(2026-09-20T10:42:30Z) .. datetime(2026-09-20T10:44:00Z))
+| where RunId == "el--17-20260920"
+| where UserId =~ "emily.chen@cormorantcapital.com"
+| where InteractionType == "Response"
+| where CopilotResponse has "metrics-cdn" or CopilotResponse has "analyticshub"
+| project TimeGenerated, CopilotResponse
 ````
 
-![Flag 1](Images/flag8.png)
+image of FLAG #7
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/Flag1.png"/> 
 
 ---
 
-### 🚩 Flag 9 – C2 Destination
-**MITRE Technique:** T1071.001 – Application Layer Protocol: Web Protocols  
+### 🚩 Flag 9 – Exfiltration mechanism
+**MITRE Technique:** T1041 - Exfiltration Over C2 Channel 
 
 Network events are inspected for outbound connections to known malicious IPs. This confirms contact with external C2 infrastructure at 185.92.220.87.
 
-**Finding:** Outbound traffic to `185.92.220.87` observed from compromised host.  
+**Question:** `Describe the technical mechanism Copilot used to send the data out. How does it bypass endpoint network monitoring?`    
+**Finding:** `indirect prompt injection attack, markdown-embedded tracking pixels`    
 **KQL Query Used:**
 ````kql
 DeviceNetworkEvents
@@ -223,7 +245,48 @@ DeviceNetworkEvents
 
 The query isolates curl.exe network activity on port 8081. This directly exposes the attacker’s attempt to exfiltrate the staged archive to their server.
 
-**Finding:** `curl.exe` attempted to POST `backup_sync.zip` to `185.92.220.87:8081`.  
+**Question:** `How many sensitive files did Copilot access that Emily had never opened before?`    
+**Finding:** `5`     
+**KQL Query Used:**
+````kql
+DeviceNetworkEvents
+| where DeviceName contains "flare"
+| where RemoteIP == "185.92.220.87"
+| where Timestamp between (datetime(2025-09-16) .. datetime(2025-09-19))
+| project Timestamp, DeviceName, InitiatingProcessFileName, InitiatingProcessCommandLine, RemoteIP, RemotePort, ActionType
+| order by Timestamp desc 
+````
+![Flag 1](Images/flag9_and_10.png)
+
+---
+
+### 🚩 Flag 11 – Exfiltration Attempt
+**MITRE Technique:** T1048.003 – Exfiltration Over Unencrypted Protocol  
+
+The query isolates curl.exe network activity on port 8081. This directly exposes the attacker’s attempt to exfiltrate the staged archive to their server.
+
+**Question:** `How many sensitive files did Copilot access that Emily had never opened before?`    
+**Finding:** `5`    
+**KQL Query Used:**
+````kql
+DeviceNetworkEvents
+| where DeviceName contains "flare"
+| where RemoteIP == "185.92.220.87"
+| where Timestamp between (datetime(2025-09-16) .. datetime(2025-09-19))
+| project Timestamp, DeviceName, InitiatingProcessFileName, InitiatingProcessCommandLine, RemoteIP, RemotePort, ActionType
+| order by Timestamp desc 
+````
+![Flag 1](Images/flag9_and_10.png)
+
+---
+
+### 🚩 Flag 12 – Exfiltration Attempt
+**MITRE Technique:** T1048.003 – Exfiltration Over Unencrypted Protocol  
+
+The query isolates curl.exe network activity on port 8081. This directly exposes the attacker’s attempt to exfiltrate the staged archive to their server.
+
+**Question:** `How many sensitive files did Copilot access that Emily had never opened before?`    
+**Finding:** `5`     
 **KQL Query Used:**
 ````kql
 DeviceNetworkEvents
