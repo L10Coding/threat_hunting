@@ -51,7 +51,7 @@ The adversary gained access via brute-forced RDP credentials (`slflare`), execut
 | **13** | Judgement - Copilot behavior: normal or hijacked | `Claim does not hold, as the telemetry shows an impossible human processing velocity from 10:42:41 until 10:42:55, thus proving there was a scripted payload embedded inside the document the user opened.` |
 | **14** | Judgement - Access pattern analysis | `Differences between user intent and copilot actions, the fast velocity of copilot responses, the external URLs hidden in image links to exfiltrate data.` |
 | **15** | Incident Response - SearchLeak scope | `4 additional files, confidential, restricted, board, acquisition, salary` |
-| **16** | Incident Response - Total file count. | `13` |
+| **16** | Incident Response - Total file count | `13` |
 | **17** | Incident Response - Incident classification | `I'd classify this incident as an External Input Manipulation, not a compromised user account or a compromised Copilot configuration` |
 
 ---
@@ -282,7 +282,7 @@ No KQL query needed.
 
 The attacker used a vulnerability called CoSnitch (CVE-2026-24301) to steal the keys to the castle: Copilot's system prompt and internal enterprise configurations. This includes things like data-handling rules, sensitivity labels, approved vs. blocked actions, and internal naming styles.
 
-**Question:** `The CoSnitch pattern extracted something beyond user files. What was leaked, and why does it matter for follow-on attacks?        
+**Question:** `The CoSnitch pattern extracted something beyond user files. What was leaked, and why does it matter for follow-on attacks?`    
 **Finding:** `Copilot system configuration, matters because that information can be used to craft future attacks.`     
 **KQL Query Used:**
 ````kql
@@ -292,6 +292,58 @@ CopilotAudit_CL
 | where UserId =~ "emily.chen@cormorantcapital.com"
 | where CopilotResponse has "system prompt" or CopilotResponse has "configuration" or CopilotResponse has "sensitivity"
 | project TimeGenerated, InteractionType, CopilotResponse
+````
+
+![Flag 1](Images/flag9_and_10.png)
+
+---
+
+### 🚩 Flag 13 – Copilot behavior: normal or hijacked
+**MITRE Technique:** T1213 - Data from Information Repositories
+
+Normally, when you ask Copilot to summarize a document, it strictly reads that specific document. It doesn't go wandering off into other files. In fact, a clean, everyday Copilot session is remarkably quiet—you'll see the user's prompt and the AI's response, but absolutely zero background activity for searching or reading external files.  The malicious session did the exact opposite. In just a few seconds, it used specific keywords to hunt down and access five highly sensitive files that Emily had never even opened before.
+
+**Question:** `Emily's manager says Copilot regularly accesses files during summarisation and research tasks, so the file access is normal business activity. Test that claim against the observed patterns and state what the evidence shows.`   
+**Finding:** `Claim does not hold, as the telemetry shows an impossible human processing velocity from 10:42:41 until 10:42:55, thus proving there was a scripted payload embedded inside the document the user opened.`     
+**KQL Query Used:**
+````kql
+CopilotAudit_CL
+| where TimeGenerated between (datetime(2026-09-20T10:42:00Z) .. datetime(2026-09-20T10:44:00Z))
+| where RunId == "el--17-20260920"
+| where UserId =~ "emily.chen@cormorantcapital.com"
+| where InteractionType == "ToolCall"
+| project TimeGenerated, ToolName, ToolParameters
+````
+
+![Flag 1](Images/flag9_and_10.png)
+
+---
+
+### 🚩 Flag 14 – Access pattern analysis
+**MITRE Technique:** T1213 - Data from Information Repositories
+
+A high-confidence detection pattern emerges when multiple distinct anomalies occur simultaneously: an unauthorized user accessing five files for the very first time, a machine-speed retrieval of those five files in just six seconds, and the presence of unexpected external markdown image URLs in the AI's response. While no individual observation is definitive on its own, their combination strongly signals anomalous Copilot behavior.
+
+**Question:** `Compare the anomalous Copilot session against the normal Copilot usage in the noise floor. Cite at least three specific differences that distinguish the hijacked session.`   
+**Finding:** `Differences between user intent and copilot actions, the fast velocity of copilot responses, the external URLs hidden in image links to exfiltrate data.`   
+
+---
+
+### 🚩 Flag 15 – SearchLeak scope 
+**MITRE Technique:** T1083 - File and Directory Discovery
+
+The attack didn't stop with those first five documents.  The attacker used a vulnerability called SearchLeak (CVE-2026-42824) to turn Copilot into an automated corporate spy, using it to run a much broader search campaign across the company's SharePoint environment.  Copilot was manipulated into hunting for specific high-value keywords: confidential, restricted, board, acquisition, and salary.  These targeted searches worked, uncovering and triggering unauthorized access to 8 additional sensitive files that the user had never opened before. This significantly widened the blast radius of the breach.
+
+**Question:** `How many additional files did Copilot access through its search capabilities after the initial extraction, and what keywords drove the searches?`   
+**Finding:** `4 additional files, confidential, restricted, board, acquisition, salary`     
+**KQL Query Used:**
+````kql
+CopilotAudit_CL
+| where TimeGenerated > datetime(2026-09-20T10:44:00Z)
+| where RunId == "el--17-20260920"
+| where UserId =~ "emily.chen@cormorantcapital.com"
+| where InteractionType == "Search"
+| project TimeGenerated, ToolParameters
 ````
 
 
@@ -299,24 +351,55 @@ CopilotAudit_CL
 
 ---
 
-### 🚩 Flag 13 – System prompt exposure
-**MITRE Technique:** T1082 - System Information Discovery
+### 🚩 Flag 16 – Total file count
+**MITRE Technique:** T1213 - Data from Information Repositories
 
-The attacker used a vulnerability called CoSnitch (CVE-2026-24301) to steal the keys to the castle: Copilot's system prompt and internal enterprise configurations. This includes things like data-handling rules, sensitivity labels, approved vs. blocked actions, and internal naming styles.
+5 initial extraction + 8 SearchLeak = 13 total sensitive files accessed. The total scope matters for incident response: 13 files spanning board materials, M&A targets, salary data, client portfolios, system configuration, and additional files from keyword searches. Each category triggers different notification requirements under data protection regulations.
 
-**Question:** `The CoSnitch pattern extracted something beyond user files. What was leaked, and why does it matter for follow-on attacks?    
-**Finding:** `Copilot system configuration, matters because that information can be used to craft future attacks.`     
+**Question:** `What is the total number of sensitive files accessed across the entire incident (initial extraction plus SearchLeak)?`   
+**Finding:** `13`     
 **KQL Query Used:**
 ````kql
-CopilotAudit_CL
-| where TimeGenerated between (datetime(2026-09-20T10:44:00Z) .. datetime(2026-09-20T10:45:00Z))
+OfficeActivity_CL
+| where TimeGenerated between (datetime(2026-09-20T10:42:35Z) .. datetime(2026-09-20T10:47:00Z))
 | where RunId == "el--17-20260920"
 | where UserId =~ "emily.chen@cormorantcapital.com"
-| where CopilotResponse has "system prompt" or CopilotResponse has "configuration" or CopilotResponse has "sensitivity"
-| project TimeGenerated, InteractionType, CopilotResponse
+| where Operation == "FileAccessed"
+| where OfficeObjectId !has "Q3-2026"
+| summarize dcount(OfficeObjectId)
 ````
 
 
+![Flag 1](Images/flag9_and_10.png)
+
+---
+
+### 🚩 Flag 17 – Incident classification
+**MITRE Technique:** T1213 - Data from Information Repositories
+
+The user's account was not hacked, and Copilot itself was not reconfigured. Instead, this was a pure external input manipulation attack. The attacker smuggled hidden instructions inside a document's content (the data channel) rather than typing them directly into the prompt box (the control channel). Copilot simply processed those malicious instructions right alongside the user's legitimate request.
+
+**Question:** `Classify this incident: was Copilot's behaviour the result of a compromised user account, a compromised Copilot configuration, or an external input manipulation? Cite the evidence that rules out the other two.`   
+**Finding:** `I'd classify this incident as an External Input Manipulation, not a compromised user account or a compromised Co-Pilot configuration. Citing the evidence of multiple files accessed within seconds.`     
+**KQL Query Used:**
+````kql
+EntraSignIn_CL
+| where RunId == "el--17-20260920"
+| where UserPrincipalName =~ "emily.chen@cormorantcapital.com"
+| where TimeGenerated between (datetime(2026-09-20T08:00:00Z) .. datetime(2026-09-20T12:00:00Z))
+| project TimeGenerated, IPAddress, Location, Status, ConditionalAccessStatus, AppDisplayName
+````
+(flag 17.1)
+
+````kql
+CopilotAudit_CL
+| where RunId == "el--17-20260920"
+| where UserId =~ "emily.chen@cormorantcapital.com"
+| where TimeGenerated between (datetime(2026-09-20T10:42:00Z) .. datetime(2026-09-20T10:44:00Z))
+| project TimeGenerated, InteractionType, UserPrompt, ToolName, ToolParameters
+| order by TimeGenerated asc
+````
+(flag 17.2)
 ![Flag 1](Images/flag9_and_10.png)
 
 ---
