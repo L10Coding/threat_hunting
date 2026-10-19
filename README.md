@@ -420,54 +420,36 @@ CopilotAudit_CL
 
 | Tactic | Technique | ID |
 |--------|-----------|----|
-| Initial Access | Brute Force | T1110.001 |
-| Credential Access | Valid Accounts | T1078 |
-| Execution | Command & Script Interpreter (Windows) | T1059.003 |
-| Execution | User Execution | T1204.002 |
-| Persistence | Scheduled Task | T1053.005 |
-| Defense Evasion | Impair Defenses | T1562.001 |
-| Discovery | System Information Discovery | T1082 |
-| Collection | Local Data Staging | T1074.001 |
-| Command & Control | Application Layer Protocol: Web Protocols | T1071.001 |
-| Exfiltration | Exfiltration Over Unencrypted Protocol | T1048.003 |
-
----
-
-## 🔷 Diamond Model Summary
-
-- **Adversary:** External attacker using brute-force RDP from `159.26.106.84`  
-- **Infrastructure:** Remote IP `185.92.220.87`, port `8081` for exfiltration  
-- **Capabilities:** Credential access, persistence via scheduled tasks, defense evasion, discovery, exfiltration  
-- **Victim:** Windows host `slflarewinsysmo`, user account `slflare`  
+| Initial Access | Phishing: Spearphishing Attachment | T1566.001|
+| Execution| User Execution: Malicious File | T1204.002|
+| Execution | LLM Prompt Injection: Indirect (ATLAS)| AML.T0051.001 |
+| Discovery | Tool Discovery: AI Agent Tool Invocation (ATLAS) | AML.T0086|
+| Collection | Data from Information Repositories| T1213 |
+| Exfiltration | Exfiltration Over C2 Channel | T1041 |
 
 ---
 
 ## 📌 Lessons Learned
-- External RDP access remains a high-risk entry vector.  
-- Lack of MFA allowed brute-force compromise.  
-- Data staging in `AppData\Local\Temp` indicates poor endpoint monitoring coverage.  
-- Outbound traffic controls insufficient to block malicious curl exfiltration.  
-
+- **The Data Channel is an Execution Vector:** Traditional email defense focus is on macro execution or malicious binaries; indirect prompt injections turn benign text files into scriptable execution vectors when parsed by an LLM.
+- **Implicit Trust in User Identity Bypasses AI Restraints:** Because analyst Emily Chen had no anomalous sign-ins or malicious intent, security controls allowed the file searches because they originated from her legitimately authenticated token via Copilot.
+- **Render-Time Exfiltration Bypasses Traditional Network Blocks:** Markdown tracking pixels leverage standard, authenticated web traffic. The data leaks directly from the victim's client browser, making it invisible to perimeter server alerts looking for massive bulk file transfers.
+- **Audit Trails Lack Blast-Radius Visibility:** Standard audit logs capture the file structural transaction metadata (the scope of files opened) but completely fail to record what exact text payload or specific snippet was pulled out and sent down the exfiltration pipe.  
+- **Attack Expansion via LLM Search Manipulation:** Vulnerabilities like SearchLeak prove that once an initial injection occurs, an attacker can use the LLM to systematically guess and search for company secrets autonomously, exponentially increasing the blast radius of a single document view. 
 ---
 
 ## 🛠 Recommendations
 
-### Immediate Actions Needed
-1. Disable RDP exposure to the internet or enforce VPN-only access.  
-2. Force password reset for `slflare` and all privileged accounts.  
-3. Block outbound connections to `185.92.220.87` and monitor for related IOCs.  
+### AI Gateway & Content Security Controls (Immediate)
+1. **Implement Markdown/Hyperlink Content Security Policies (CSP):** Enforce visual rendering restrictions that strip out unapproved external image markdown URLs (![image](url)) inside Copilot client response wrappers.
+2. **Deploy Prompt Injection Filters:** Enable enterprise LLM firewalls capable of scanning untrusted third-party inputs (like emails and downloads) for hidden structural boundaries, zero-point text, or adversarial prompt injection text patterns before passing data to the LLM context window. 
+3. **Block the Data Leak Domain:** Immediately block outbound network requests to metrics-cdn.analyticshub.io at the perimeter firewall and proxy level. 
 
-### Short-term Improvements (1–30 days)
-1. Enforce MFA for all remote access accounts.  
-2. Harden scheduled task creation monitoring with alerting.  
-3. Audit and reset Windows Defender exclusions across endpoints.  
+### Data Governance & Graph API Hardening (Short-Term)
+1. **Enforce Least-Privilege SharePoint Access:** Audit data permissions across SharePoint and OneDrive. Copilot can only access what the user has permission to view. Restrict "all-company" read permissions on highly sensitive folders (e.g., HR, M&A data) to stop automated cross-tenant crawling. 
+2. **Configure Copilot Sensitivity Labels:** Implement Microsoft Purview Information Protection tags. Block Copilot from referencing or parsing documents explicitly tagged as Confidential or Restricted during open-ended public or external summarizing tasks. 
+3. **Establish Rate-Limiting Constraints:** Request or implement strict API throttling limits within the Microsoft Graph execution context to block machine-speed "burst" file queries (e.g., accessing 5 discrete files in 6 seconds).
 
-### Long-term Security Enhancements
-1. Implement network segmentation to isolate user workstations from sensitive resources.  
-2. Deploy DLP (Data Loss Prevention) and outbound proxy controls.  
-3. Regularly conduct red team simulations of RDP brute force and exfiltration.  
+### Monitoring & Incident Response Adjustments (Long-Term)
+1. **Deploy Dedicated Copilot Audit Alerts:** Build high-severity SIEM/SIEM alerts targeting the CopilotAudit_CL telemetry stream for instances where user prompt intent doesn't match the resulting ToolCall executions. 
+2. **Establish "Impossible Velocity" Access Logic:** Flag any instance where a single user context registers multiple document opens across separate repositories faster than a human could physically click and read them.
 
-### Detection Improvements (Optional)
-- **Monitoring Gaps Identified:** Lack of visibility on archive creation and Defender exclusion.  
-- **Recommended Alerts:** New scheduled tasks, Defender exclusions, abnormal curl usage.  
-- **Query Improvements:** Expand hunting queries to baseline and flag abnormal `cmd.exe` + `systeminfo` usage.  
