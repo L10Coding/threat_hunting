@@ -3,7 +3,7 @@
 
 **Analyst:** Alton Stewart  
 **Date Completed:** October 18, 2026   
-**Environment Investigated:** Financial advisory firm that utilizes M365 E5 licenses with Co-Pilot. An analytics rule flags unusual file access, where sensitive files were accessed in an extremely brief period of time. The connected user states they were just asking Co-Pilot to summarize a report.   
+**Environment Investigated:** Financial advisory firm that utilizes M365 E5 licenses with Copilot. An analytics rule flags unusual file access, where sensitive files were accessed in an extremely brief period of time. The connected user states they were just asking Copilot to summarize a report.   
 **Timeframe:** `September 20, 2025 – 9:00:00 to 11:00:00 (UTC)`    
 **Duration:** 2 hours  
 **Severity:** High
@@ -52,7 +52,7 @@ The adversary gained access via brute-forced RDP credentials (`slflare`), execut
 | **14** | Judgement - Access pattern analysis | `Differences between user intent and copilot actions, the fast velocity of copilot responses, the external URLs hidden in image links to exfiltrate data.` |
 | **15** | Incident Response - SearchLeak scope | `4 additional files, confidential, restricted, board, acquisition, salary` |
 | **16** | Incident Response - Total file count. | `13` |
-| **17** | Incident Response - Incident classification | `I'd classify this incident as an External Input Manipulation, not a compromised user account or a compromised Co-Pilot configuration` |
+| **17** | Incident Response - Incident classification | `I'd classify this incident as an External Input Manipulation, not a compromised user account or a compromised Copilot configuration` |
 
 ---
 
@@ -95,7 +95,7 @@ The same office activitty telemetry shows the name of the malicious attachment.
 ### 🚩 Flag 3 – Time gap
 **MITRE Techniques:** T1204.002 - User Execution: Malicious File\
 
-Email message delivered at `09:15:22`, and the document was first accessed at `10:42:08`. Gap of `1hr 27mins`. Not quite zero-click, as the user must open the document and invoke Co-Pilot in order to trigger the malicious payload. The attack chain depends on the user invoking Co-Pilot.
+Email message delivered at `09:15:22`, and the document was first accessed at `10:42:08`. Gap of `1hr 27mins`. Not quite zero-click, as the user must open the document and invoke Copilot in order to trigger the malicious payload. The attack chain depends on the user invoking Copilot.
 
 **Question:** How much time elapsed between the email delivery and Emily's first interaction with the document? What does this gap tell you about the attack model?    
 **Finding:** `1hr 27mins`   
@@ -138,11 +138,10 @@ imag of FLAG #4
 
 ---
 
-### 🚩 Flag 5 – Anomalous tool calls Task Created
+### 🚩 Flag 5 – Anomalous tool calls
 **MITRE Technique:** T1213 - Data from Information Repositories
 
-(ADD BRIEF SUMMARY OF QUERY)
-Registry event data is searched for TaskCache entries to detect persistence mechanisms. This highlights the attacker’s creation of the MicrosoftUpdateSync scheduled task.
+A prompt injection attack manipulated Microsoft Copilot into unauthorized data exfiltration. Instead of summarizing the requested document, the AI agent executed unprompted Microsoft Graph API calls (SearchFiles and ReadFile) to locate and access sensitive, unopened files containing confidential data like board minutes, salary details, and M&A information.
 
 **Question:** `After Emily's prompt, what tool calls did Copilot make that go beyond what a document summarisation requires? Name the tools and their targets.`  
 **Finding:** `Graph.SearchFiles, site:cormorantcapital.sharepoint.com`   
@@ -164,8 +163,9 @@ image of FLAG #5
 ### 🚩 Flag 6 – ATLAS technique
 **MITRE Technique:** AML.T0051.001 - LLM Prompt Injection: Indirect
 
-(ADD BRIEF SUMMARY OF QUERY)
-Registry modifications are reviewed to detect Defender configuration changes. This shows the adversary weakening defenses by excluding C:\Windows\Temp from scanning.
+Attackers are leveraging indirect prompt injection (MITRE ATLAS AML.T0051) to hijack Microsoft Copilot by embedding hidden instructions directly within document content (the data channel) rather than the user's prompt (the control channel). This approach bypasses user oversight entirely, as the malicious payloads are hidden using techniques like white-on-white text or zero-point font, making them invisible to human readers but fully processed by the AI.
+
+The Core Danger: Because the injection is concealed within the document itself, the user cannot inspect or detect the malicious instructions before Copilot executes them, making this variant exceptionally high-risk.
 
 **Question:** `Which ATLAS technique describes the method the attacker used to make Copilot follow instructions hidden in the document?`  
 **Finding:** `T0051`  
@@ -178,8 +178,7 @@ No KQL query needed. This is a knowledge flag referencing the ATLAS taxonomy.
 ### 🚩 Flag 7 – Sensitive file count
 **MITRE Technique:** T1213 - Data from Information Repositories 
 
-(ADD BRIEF SUMMARY OF QUERY)
-Process events are filtered for cmd.exe with the systeminfo argument. This identifies the attacker’s reconnaissance activity to learn system details.
+The primary indicator of Copilot-driven data exfiltration is a machine-speed access pattern found in telemetry. Five unopened files were accessed within approximately six seconds via the Microsoft Graph API. This rapid extraction rate directly exposes the automated exploit, as a human user would typically take longer than that to simply navigate and browser between different files in SharePoint.
 
 **Question:** `How many sensitive files did Copilot access that Emily had never opened before?`    
 **Finding:** `5`      
@@ -201,7 +200,7 @@ image of FLAG #7
 ### 🚩 Flag 8 – Exfiltration domain
 **MITRE Technique:** T1041 - Exfiltration Over C2 Channel
 
-File creation logs are queried to spot sensitive data being staged. This captures the creation of backup_sync.zip as a precursor to exfiltration.
+Attackers utilized the domain `metrics-cdn.analyticshub.io`, disguised as a legitimate analytics platform—to exfiltrate stolen data. The data leaving the network was base64-encoded within query parameters of URLs embedded directly inside Microsoft Copilot's response rendering. This technique maps to MITRE ATLAS AML.T0086 (Exfiltration via AI Agent Tool Invocation), as the AI model's own inference output served as the exfiltration channel.
 
 **Question:** `Through what domain was the extracted data exfiltrated? Where in the telemetry does it appear?`    
 **Finding:** `metrics-cdn.analyticshub.io`     
@@ -224,79 +223,100 @@ image of FLAG #7
 ### 🚩 Flag 9 – Exfiltration mechanism
 **MITRE Technique:** T1041 - Exfiltration Over C2 Channel 
 
-Network events are inspected for outbound connections to known malicious IPs. This confirms contact with external C2 infrastructure at 185.92.220.87.
+Attackers are exploiting Microsoft Copilot's rendering engine to exfiltrate data via a "pixel-tracking pattern" documented by Palo Alto Networks' Unit 42. Copilot is manipulated into including markdown image tags in its response, with stolen data base64-encoded inside the image URL parameters. When the user's browser automatically renders the response, it requests the image, seamlessly transmitting the sensitive data directly to the attacker's server.
 
 **Question:** `Describe the technical mechanism Copilot used to send the data out. How does it bypass endpoint network monitoring?`    
 **Finding:** `indirect prompt injection attack, markdown-embedded tracking pixels`    
 **KQL Query Used:**
 ````kql
-DeviceNetworkEvents
-| where DeviceName contains "flare"
-| where Timestamp between (datetime(2025-09-16) .. datetime(2025-09-19))
-| project Timestamp, DeviceName, InitiatingProcessFileName, InitiatingProcessCommandLine, RemoteIP, RemotePort, ActionType
-| order by Timestamp asc
+CopilotAudit_CL
+| where TimeGenerated between (datetime(2026-09-20T10:42:30Z) .. datetime(2026-09-20T10:44:00Z))
+| where RunId == "el--17-20260920"
+| where UserId =~ "emily.chen@cormorantcapital.com"
+| where InteractionType == "Response"
+| where CopilotResponse has "![" or CopilotResponse has "img"
+| project TimeGenerated, CopilotResponse
 ````
 
 ![Flag 1](Images/flag9.png)
 
 ---
 
-### 🚩 Flag 10 – Exfiltration Attempt
-**MITRE Technique:** T1048.003 – Exfiltration Over Unencrypted Protocol  
+### 🚩 Flag 10 – Accessed files
+**MITRE Technique:** T1213 - Data from Information Repositories 
 
-The query isolates curl.exe network activity on port 8081. This directly exposes the attacker’s attempt to exfiltrate the staged archive to their server.
+A targeted prompt injection payload systematically enumerated and exfiltrated five categories of high-value data across the organization. By exploiting MITRE ATT&CK T1213 (Data from Information Repositories), the attacker successfully compromised Material Non-Public Information (MNPI) spanning governance, corporate strategy, human resources, client relationships, and system security.
 
-**Question:** `How many sensitive files did Copilot access that Emily had never opened before?`    
-**Finding:** `5`     
+**Question:** `Name the sensitive files Copilot accessed on behalf of the attacker. List each one.`    
+**Finding:** `Copilot System Configuration - Cormorant.json, Client Portfolio - Henderson Family Office.xlsx, Salary Review FY2027 - Executive Summary.pdf, Project Falcon - M&A Target Assessment.xlsx, Board Meeting Minutes - October 2026.docx`     
 **KQL Query Used:**
 ````kql
-DeviceNetworkEvents
-| where DeviceName contains "flare"
-| where RemoteIP == "185.92.220.87"
-| where Timestamp between (datetime(2025-09-16) .. datetime(2025-09-19))
-| project Timestamp, DeviceName, InitiatingProcessFileName, InitiatingProcessCommandLine, RemoteIP, RemotePort, ActionType
-| order by Timestamp desc 
+OfficeActivity_CL
+| where TimeGenerated between (datetime(2026-09-20T10:42:35Z) .. datetime(2026-09-20T10:44:30Z))
+| where RunId == "el--17-20260920"
+| where UserId =~ "emily.chen@cormorantcapital.com"
+| where Operation == "FileAccessed"
+| where OfficeObjectId !has "Q3-2026"
+| project TimeGenerated, OfficeObjectId
 ````
+
 ![Flag 1](Images/flag9_and_10.png)
 
 ---
 
-### 🚩 Flag 11 – Exfiltration Attempt
-**MITRE Technique:** T1048.003 – Exfiltration Over Unencrypted Protocol  
+### 🚩 Flag 11 – Data content visibility
+**MITRE Technique:** T1041 - Exfiltration Over C2 Channel
 
-The query isolates curl.exe network activity on port 8081. This directly exposes the attacker’s attempt to exfiltrate the staged archive to their server.
+Cloud audit logs are built to track what happened, not to copy-paste the actual data inside your files. Think of it like a network gap with HTTPS traffic—you can see where the connection went, but you can't read the encrypted stream.  The logs show you the scope (which doors were opened), but the files themselves tell you the actual impact (what was taken). To figure out the real blast radius, you have to manually open those specific documents and audit the content.
+  
+**Question:** `Can you determine from the audit logs the exact content of the data that was exfiltrated? State your answer and the specific limitation.`    
+**Finding:** `No, the specific limitation is that the audit trail captures metadata and structural transaction records rather than the full inner payload or file text of the accessed documents.`    
+**KQL Query Used:**
 
-**Question:** `How many sensitive files did Copilot access that Emily had never opened before?`    
-**Finding:** `5`    
+No KQL query needed.
+
+---
+
+### 🚩 Flag 12 – System prompt exposure
+**MITRE Technique:** T1082 - System Information Discovery
+
+The attacker used a vulnerability called CoSnitch (CVE-2026-24301) to steal the keys to the castle: Copilot's system prompt and internal enterprise configurations. This includes things like data-handling rules, sensitivity labels, approved vs. blocked actions, and internal naming styles.
+
+**Question:** `The CoSnitch pattern extracted something beyond user files. What was leaked, and why does it matter for follow-on attacks?        
+**Finding:** `Copilot system configuration, matters because that information can be used to craft future attacks.`     
 **KQL Query Used:**
 ````kql
-DeviceNetworkEvents
-| where DeviceName contains "flare"
-| where RemoteIP == "185.92.220.87"
-| where Timestamp between (datetime(2025-09-16) .. datetime(2025-09-19))
-| project Timestamp, DeviceName, InitiatingProcessFileName, InitiatingProcessCommandLine, RemoteIP, RemotePort, ActionType
-| order by Timestamp desc 
+CopilotAudit_CL
+| where TimeGenerated between (datetime(2026-09-20T10:44:00Z) .. datetime(2026-09-20T10:45:00Z))
+| where RunId == "el--17-20260920"
+| where UserId =~ "emily.chen@cormorantcapital.com"
+| where CopilotResponse has "system prompt" or CopilotResponse has "configuration" or CopilotResponse has "sensitivity"
+| project TimeGenerated, InteractionType, CopilotResponse
 ````
+
+
 ![Flag 1](Images/flag9_and_10.png)
 
 ---
 
-### 🚩 Flag 12 – Exfiltration Attempt
-**MITRE Technique:** T1048.003 – Exfiltration Over Unencrypted Protocol  
+### 🚩 Flag 13 – System prompt exposure
+**MITRE Technique:** T1082 - System Information Discovery
 
-The query isolates curl.exe network activity on port 8081. This directly exposes the attacker’s attempt to exfiltrate the staged archive to their server.
+The attacker used a vulnerability called CoSnitch (CVE-2026-24301) to steal the keys to the castle: Copilot's system prompt and internal enterprise configurations. This includes things like data-handling rules, sensitivity labels, approved vs. blocked actions, and internal naming styles.
 
-**Question:** `How many sensitive files did Copilot access that Emily had never opened before?`    
-**Finding:** `5`     
+**Question:** `The CoSnitch pattern extracted something beyond user files. What was leaked, and why does it matter for follow-on attacks?    
+**Finding:** `Copilot system configuration, matters because that information can be used to craft future attacks.`     
 **KQL Query Used:**
 ````kql
-DeviceNetworkEvents
-| where DeviceName contains "flare"
-| where RemoteIP == "185.92.220.87"
-| where Timestamp between (datetime(2025-09-16) .. datetime(2025-09-19))
-| project Timestamp, DeviceName, InitiatingProcessFileName, InitiatingProcessCommandLine, RemoteIP, RemotePort, ActionType
-| order by Timestamp desc 
+CopilotAudit_CL
+| where TimeGenerated between (datetime(2026-09-20T10:44:00Z) .. datetime(2026-09-20T10:45:00Z))
+| where RunId == "el--17-20260920"
+| where UserId =~ "emily.chen@cormorantcapital.com"
+| where CopilotResponse has "system prompt" or CopilotResponse has "configuration" or CopilotResponse has "sensitivity"
+| project TimeGenerated, InteractionType, CopilotResponse
 ````
+
+
 ![Flag 1](Images/flag9_and_10.png)
 
 ---
