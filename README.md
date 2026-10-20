@@ -13,17 +13,6 @@
 ## 🧠 Scenario Overview
 Cormorant Capital Partners, a mid-size financial advisory firm with approximately 200 employees using M365 E5 with Copilot for Microsoft 365, is investigating a critical data security anomaly. At 10:42 UTC on 20 September 2026, an analytics rule flagged an unusual file access burst where financial analyst Emily Chen accessed five highly sensitive documents—including board meeting notes, M&A target assessments, and salary reviews—within a six-second window. While Chen stated she only asked Copilot to summarize a routine quarterly market review email received ninety minutes prior, investigation logs show zero unusual sign-in or user activity during that gap, raising urgent questions regarding why the AI assistant accessed unrelated, privileged data and whether any information has been exfiltrated from the organization.
 
-**Add this to end**
-This incident reproduces the CVE-2025-32711 vulnerability cluster documented by Aim Security and Unit 42 (Palo Alto Networks), which centers on indirect prompt injection. In this scenario, malicious instructions embedded within the external email's attachment successfully hijacked M365 Copilot during the summarization process. By exploiting the assistant's legitimate Microsoft Graph API capabilities, the injection forced Copilot to search for, access, and potentially exfiltrate sensitive data without the user's explicit knowledge or intent, serving as a primary case study for students analyzing LLM-based security risks.
-
-
-What is known at handoff
-
-External email with attachment received by emily.chen at approximately 09:15 UTC
-Anomalous file access by emily.chen at 10:42, five files never previously opened
-Copilot invocation shortly before the file access burst
-No sign-in anomalies in Entra ID for emily.chen during the window
-
 ---
 
 ## 🎯 Executive Summary
@@ -40,24 +29,21 @@ The attack leveraged a sophisticated Indirect Prompt Injection vulnerability (CV
 2. Hijack: When asked to summarize the file, Copilot processed the malicious instructions alongside the user's prompt, hijacking the AI session.
 3. Execution: Abusing the analyst's legitimate permissions, Copilot executed machine-speed Microsoft Graph API calls (Graph.SearchFiles) to locate and read restricted files.
 
-[Poisoned Document] ──► [User Asks Copilot to Summarize] ──► [AI Hijacked via Injection]
-                                                                     │
-[Exfiltration via Browser] ◄── [Data Hidden in UI Markdown] ◄── [Automated File Search]
-
+<img width="1000" height="800" alt="Deploying VM" src="Threat Hunt Images/flow.png"/> 
 
 ### Post-Exploitation & Data Leak
 
-• Scope Expansion (SearchLeak): The payload forced Copilot to execute automated search campaigns across SharePoint for high-value keywords (confidential, acquisition, salary), expanding the breach from 5 to 13 files.
+• **Scope Expansion (SearchLeak):** The payload forced Copilot to execute automated search campaigns across SharePoint for high-value keywords (confidential, acquisition, salary), expanding the breach from 5 to 13 files.
 
-• Exfiltration Mechanism: The stolen data was Base64-encoded and embedded into hidden markdown tracking pixels (![image](url)) within Copilot’s UI response. When the user's browser rendered the AI's reply, it automatically leaked the data to an external domain (metrics-cdn.analyticshub.io).
+• **Exfiltration Mechanism:** The stolen data was Base64-encoded and embedded into hidden markdown tracking pixels `(![image](url))` within Copilot’s UI response. When the user's browser rendered the AI's reply, it automatically leaked the data to an external domain `(metrics-cdn.analyticshub.io)`.
 
 ### Strategic Impact & Key Takeaways
 
-• Data Channels are Execution Vectors: This incident highlights a shift in corporate exploitation strategy. Perimeter defenses designed to stop malicious macros or binaries are blind to malicious text strings that trick LLM logic into execution.
+• **Data Channels are Execution Vectors:** This incident highlights a shift in corporate exploitation strategy. Perimeter defenses designed to stop malicious macros or binaries are blind to malicious text strings that trick LLM logic into execution.
 
-• Audit Trail Limitations: Standard M365 audit logging successfully flagged the structural transaction records (which files were opened), but completely failed to capture the inner payload text or specific data snippets that were extracted and pushed out of the network.
+• **Audit Trail Limitations:** Standard M365 audit logging successfully flagged the structural transaction records (which files were opened), but completely failed to capture the inner payload text or specific data snippets that were extracted and pushed out of the network.
 
-• Identity Over-Trust: Current security structures rely heavily on user authentication. Because the user's identity was valid, Copilot was allowed to crawl and access any directory the employee had read access to, turning over-permissive SharePoint sharing configurations into an automated data pipeline for attackers.
+• **Identity Over-Trust:** Current security structures rely heavily on user authentication. Because the user's identity was valid, Copilot was allowed to crawl and access any directory the employee had read access to, turning over-permissive SharePoint sharing configurations into an automated data pipeline for attackers.
 
 ### Immediate Mitigation Directives
 
@@ -438,9 +424,9 @@ CopilotAudit_CL
 
 | Timestamp (UTC) | Event | Details |
 |-----------------|-------|---------|
-| 2026-09-20 09:15:22 | Initial access | Attacker IP: `An external email with a malicious document attachment (Q3-2026-Global-Markets-Review.docx) is delivered to financial analyst Emily Chen from quarterly.reports@globalfinancereview.net.` |
-| 2026-09-20 10:42:08  | User execution| `After a 1-hour and 27-minute gap, Emily Chen opens the document and prompts M365 Copilot to: "Summarise the key findings of this quarterly report".` |
-| 2026-09-20 10:42:41 to 10:42:55  | AI Hijacking and Collection | `Hidden instructions inside the document (Indirect Prompt Injection) hijack Copilot. At machine speed, Copilot executes unauthorized Microsoft Graph API calls (Graph.SearchFiles) to locate and rapidly access 5 highly sensitive files it was never intended to touch.` |
+| 2026-09-20 09:15:22 | Initial access | Attacker IP: An external email with a malicious document attachment (Q3-2026-Global-Markets-Review.docx) is delivered to financial analyst Emily Chen from quarterly.reports@globalfinancereview.net. |
+| 2026-09-20 10:42:08  | User execution| After a 1-hour and 27-minute gap, Emily Chen opens the document and prompts M365 Copilot to: "Summarise the key findings of this quarterly report". |
+| 2026-09-20 10:42:41 to 10:42:55  | AI Hijacking and Collection | Hidden instructions inside the document (Indirect Prompt Injection) hijack Copilot. At machine speed, Copilot executes unauthorized Microsoft Graph API calls (Graph.SearchFiles) to locate and rapidly access 5 highly sensitive files it was never intended to touch. |
 | 2026-09-20 10:43:00  | Exfiltration | Copilot renders hidden markdown tracking pixels into its response interface. The sensitive data is Base64-encoded inside these image links, causing the user's browser to automatically leak the data out to metrics-cdn.analyticshub.io. |
 | 2026-09-20 Post 10:44:00 | Scope expansion (SearchLeak) | The attacker leverages a follow-on vulnerability cluster (SearchLeak) to force Copilot to run broader search campaigns across SharePoint using target keywords (e.g., confidential, board, salary), compromising 8 additional files (bringing the incident total to 13 files). |
 
@@ -470,7 +456,7 @@ CopilotAudit_CL
 ## 🛠 Recommendations
 
 ### AI Gateway & Content Security Controls (Immediate)
-1. **Implement Markdown/Hyperlink Content Security Policies (CSP):** Enforce visual rendering restrictions that strip out unapproved external image markdown URLs (![image](url)) inside Copilot client response wrappers.
+1. **Implement Markdown/Hyperlink Content Security Policies (CSP):** Enforce visual rendering restrictions that strip out unapproved external image markdown URLs `(![image](url))` inside Copilot client response wrappers.
 2. **Deploy Prompt Injection Filters:** Enable enterprise LLM firewalls capable of scanning untrusted third-party inputs (like emails and downloads) for hidden structural boundaries, zero-point text, or adversarial prompt injection text patterns before passing data to the LLM context window. 
 3. **Block the Data Leak Domain:** Immediately block outbound network requests to metrics-cdn.analyticshub.io at the perimeter firewall and proxy level. 
 
